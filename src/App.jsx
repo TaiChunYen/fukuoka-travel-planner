@@ -6,7 +6,7 @@ import BudgetTracker from "./components/BudgetTracker";
 import PackingChecklist from "./components/PackingChecklist";
 import { DEFAULT_CHECKLIST, DEFAULT_RATE, PRESET_ITINERARY } from "./components/Presets";
 
-const LS_KEYS = { days: "fukuoka-days-v1", rate: "fukuoka-rate-v1", check: "fukuoka-check-v1" };
+const LS_KEYS = { days: "fukuoka-days-v2", rate: "fukuoka-rate-v1", check: "fukuoka-check-v1" };
 
 function load(key, fallback) {
   try {
@@ -28,7 +28,7 @@ export default function App() {
   useEffect(() => localStorage.setItem(LS_KEYS.check, JSON.stringify(checklist)), [checklist]);
 
   const resetAll = () => {
-    if (!window.confirm("確定要重置為預設 5 天 4 夜範本嗎？你的修改將會遺失。")) return;
+    if (!window.confirm("確定要重置為預設 12 天 11 夜行程嗎？你的修改將會遺失。")) return;
     setDays(PRESET_ITINERARY);
     setRate(DEFAULT_RATE);
     setChecklist(DEFAULT_CHECKLIST);
