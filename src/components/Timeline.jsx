@@ -1,43 +1,65 @@
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Navigation, Pencil, Plus, Trash2, X, Clock, ExternalLink } from "lucide-react";
+import { ArrowDown, ArrowUp, Clock, ExternalLink, Navigation, Pencil, Plus, Trash2, X } from "lucide-react";
 import { CATEGORIES, mapsUrl } from "./Presets";
 
-const CATEGORY_COLOR = {
-  景點: "bg-sky-100 text-sky-700",
-  美食: "bg-orange-100 text-orange-700",
-  交通: "bg-violet-100 text-violet-700",
-  購物: "bg-pink-100 text-pink-700",
-  住宿: "bg-emerald-100 text-emerald-700",
-  其他: "bg-slate-100 text-slate-600",
+// 分類＝鐵道線色：圓點與類別小字用同一色，其餘文字維持墨藍
+const CAT_STYLE = {
+  景點: { dot: "bg-cat-sight", hollow: "border-cat-sight", text: "text-cat-sight" },
+  美食: { dot: "bg-cat-food", hollow: "border-cat-food", text: "text-cat-food" },
+  交通: { dot: "bg-cat-transit", hollow: "border-cat-transit", text: "text-cat-transit" },
+  購物: { dot: "bg-cat-shop", hollow: "border-cat-shop", text: "text-cat-shop" },
+  住宿: { dot: "bg-cat-stay", hollow: "border-cat-stay", text: "text-cat-stay" },
+  其他: { dot: "bg-cat-other", hollow: "border-cat-other", text: "text-cat-other" },
 };
 
 const EMPTY = { time: "", title: "", category: "景點", address: "", cost: "", note: "", slot: "", timetables: [] };
 
-// 星期中文
 const WEEKDAY = ["日", "一", "二", "三", "四", "五", "六"];
+
+const LABEL = "block text-[11px] font-medium text-ink-faint";
+const INPUT =
+  "mt-1 w-full border-0 border-b border-rule bg-transparent px-0 py-1.5 text-[13.5px] text-ink outline-none transition placeholder:text-ink-faint focus:border-indigo";
 
 function formatDateLabel(dateStr) {
   if (!dateStr) return "";
   const d = new Date(dateStr + "T00:00:00");
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
-  const w = WEEKDAY[d.getDay()];
-  return m + "/" + day + "（" + w + "）";
+  return d.getMonth() + 1 + "/" + d.getDate() + "（" + WEEKDAY[d.getDay()] + "）";
 }
 
 function weekdayType(dateStr) {
   if (!dateStr) return "";
-  const d = new Date(dateStr + "T00:00:00");
-  const w = d.getDay();
+  const w = new Date(dateStr + "T00:00:00").getDay();
   return w === 0 || w === 6 ? "土日祝" : "平日";
 }
 
-export default function Timeline({ days, setDays, activeDay, setActiveDay }) {
+function IconButton({ onClick, label, danger = false, disabled = false, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className={
+        "grid h-7 w-7 place-items-center rounded-[4px] text-ink-faint transition hover:bg-wash disabled:opacity-25 disabled:hover:bg-transparent " +
+        (danger ? "hover:text-seal" : "hover:text-ink")
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
+export default function Timeline({ days, setDays, activeDay }) {
   const [editing, setEditing] = useState(null); // item id or "new"
   const [form, setForm] = useState(EMPTY);
 
   const day = days.find((d) => d.id === activeDay) ?? days[0];
   if (!day) return null;
+
+  const dayIndex = days.findIndex((d) => d.id === day.id);
+  const moves = day.items.filter((it) => it.category === "交通").length;
+  const dayCost = day.items.reduce((s, it) => s + (Number(it.cost) || 0), 0);
 
   const updateDayItems = (dayId, items) =>
     setDays((prev) => prev.map((d) => (d.id === dayId ? { ...d, items } : d)));
@@ -84,149 +106,275 @@ export default function Timeline({ days, setDays, activeDay, setActiveDay }) {
   };
 
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-orange-100 sm:p-5">
-      {/* 天數 Tabs */}
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
-        {days.map((d) => (
+    <section aria-label="行程表" className="min-w-0">
+      {/* 當日標頭 */}
+      <div>
+        <div className="flex items-baseline justify-between gap-3 border-b-2 border-glaze-blue pb-2">
+          <h2 className="flex items-baseline gap-2 font-serif">
+            <span className="text-[19px] font-semibold sm:text-[21px]">Day {dayIndex + 1}</span>
+            <span className="tnum text-[13px] text-ink-soft">{formatDateLabel(day.date)}</span>
+          </h2>
+          {day.date && <span className="text-[11px] text-ink-faint">{weekdayType(day.date)}</span>}
+        </div>
+        <p className="tnum mt-2 text-[11.5px] text-ink-faint">
+          {day.items.length} 個行程
+          {moves > 0 && `・${moves} 段移動`}
+          {dayCost > 0 && `・¥${dayCost.toLocaleString()}`}
+        </p>
+      </div>
+
+      {/* 時刻表式行程列 */}
+      {day.items.length === 0 ? (
+        <div className="mt-6 border-y border-dashed border-rule-2 px-4 py-10 text-center">
+          <p className="text-[13px] text-ink-soft">這天還沒有行程</p>
           <button
-            key={d.id}
-            onClick={() => setActiveDay(d.id)}
-            className={
-              "shrink-0 rounded-xl px-4 py-2 text-sm font-bold transition " +
-              (d.id === day.id ? "bg-red-500 text-white shadow" : "bg-slate-100 text-slate-500 hover:bg-orange-100")
-            }
+            type="button"
+            onClick={startNew}
+            className="mt-2 text-[12.5px] font-medium text-indigo underline decoration-rule-2 underline-offset-4 transition hover:text-indigo-deep hover:decoration-indigo"
           >
-            {d.label}
-            <span className="ml-1 hidden text-xs font-normal opacity-80 sm:inline">{d.subtitle}</span>
+            新增第一個行程
           </button>
-        ))}
-      </div>
-
-      {/* 標題：Day 1・11/25（三） */}
-      <div className="mb-1 flex items-center gap-2">
-        <h2 className="text-base font-bold text-slate-800">{day.label}・{formatDateLabel(day.date)}</h2>
-        {day.date && (
-          <span className="text-xs font-medium text-orange-600 bg-orange-50/60 px-2 py-0.5 rounded">
-            {weekdayType(day.date)}
-          </span>
-        )}
-      </div>
-      <p className="mb-4 text-xs text-slate-400">
-        共 {day.items.length} 個行程・點擊 🧭 直接開啟 Google Maps 導航・🕒 開啟當日交通時刻表
-      </p>
-
-      {/* 時間軸 */}
-      <ol className="relative space-y-3 border-l-2 border-orange-100 pl-0 sm:pl-2">
-        {day.items.map((it, idx) => (
-          <li key={it.id} className="relative ml-4 rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-            <span className="absolute -left-[25px] top-4 h-3 w-3 rounded-full bg-orange-400 ring-4 ring-orange-100 sm:-left-[23px]" />
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  {it.time ? (
-                    <span className="rounded-md bg-slate-800 px-1.5 py-0.5 font-mono text-xs font-bold text-white">{it.time}</span>
-                  ) : (
-                    <span className="rounded-md bg-slate-500 px-1.5 py-0.5 font-mono text-xs font-bold text-white">{it.slot || "--:--"}</span>
-                  )}
-                  <span className={"rounded-full px-2 py-0.5 text-[11px] font-bold " + (CATEGORY_COLOR[it.category] ?? CATEGORY_COLOR["其他"])}>{it.category}</span>
-                  {it.cost > 0 && <span className="text-xs font-bold text-orange-600">¥{Number(it.cost).toLocaleString()}</span>}
-                </div>
-                <p className="mt-1 truncate text-sm font-bold text-slate-800">{it.title}</p>
-                {it.note && <p className="mt-0.5 text-xs leading-relaxed text-slate-500">💡 {it.note}</p>}
-              </div>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              <a
-                href={mapsUrl(it)}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 rounded-lg bg-sky-500 px-2.5 py-1 text-xs font-bold text-white transition hover:bg-sky-600"
+        </div>
+      ) : (
+        <ol className="mt-1">
+          {day.items.map((it, idx) => {
+            const isTransit = it.category === "交通";
+            const hasTime = Boolean(it.time);
+            const cat = CAT_STYLE[it.category] ?? CAT_STYLE["其他"];
+            const [timeStart, timeEnd] = String(it.time || "")
+              .split(/[-–~]/)
+              .map((s) => s.trim());
+            return (
+              <li
+                key={it.id}
+                className="group grid grid-cols-[3.2rem_1.1rem_minmax(0,1fr)] gap-x-3 border-b border-rule/80 py-3.5 last:border-b-0 sm:grid-cols-[4.2rem_1.1rem_minmax(0,1fr)] sm:gap-x-4"
               >
-                <Navigation size={12} /> 導航
-              </a>
-              {/* 時刻表按鈕（只對交通類別顯示） */}
-              {it.category === "交通" && it.timetables && it.timetables.length > 0 && (
-                <>
-                  {it.timetables.map((tt, ti) => (
+                {/* 時間欄 */}
+                <div className="pt-px text-right">
+                  {hasTime ? (
+                    <>
+                      <p className="tnum text-[12.5px] font-medium leading-snug text-ink">{timeStart}</p>
+                      {timeEnd && (
+                        <p className="tnum text-[12.5px] font-normal leading-snug text-ink-faint">
+                          – {timeEnd}
+                        </p>
+                      )}
+                      {it.slot && <p className="mt-0.5 text-[10.5px] text-ink-faint">{it.slot}</p>}
+                    </>
+                  ) : (
+                    <p className="text-[12px] leading-snug text-ink-soft">{it.slot || "—"}</p>
+                  )}
+                </div>
+
+                {/* 路線：實線＝停留、虛線＝移動；實心點＝時間確定 */}
+                <div className="relative flex justify-center">
+                  <span
+                    aria-hidden
+                    className={
+                      "absolute inset-y-0 left-1/2 -translate-x-1/2 " +
+                      (isTransit ? "border-l border-dashed border-rule-2" : "w-px bg-rule-2")
+                    }
+                  />
+                  <span
+                    aria-hidden
+                    className={
+                      "relative mt-1 block h-2 w-2 rounded-full ring-4 ring-paper " +
+                      (hasTime ? cat.dot : "border bg-surface " + cat.hollow)
+                    }
+                  />
+                </div>
+
+                {/* 內容 */}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={"text-[10.5px] font-medium " + cat.text}>{it.category}</span>
+                    {Number(it.cost) > 0 && (
+                      <span className="tnum ml-auto pl-3 text-[12.5px] font-medium text-ink">
+                        ¥{Number(it.cost).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 className="mt-1 text-[15px] font-medium leading-snug text-ink">{it.title}</h3>
+                  {it.note && (
+                    <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">{it.note}</p>
+                  )}
+
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                     <a
-                      key={ti}
-                      href={tt.url}
+                      href={mapsUrl(it)}
                       target="_blank"
                       rel="noreferrer"
-                      className={
-                        "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold text-white transition " +
-                        (tt.type === "official" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-sky-400 hover:bg-sky-500")
-                      }
+                      className="inline-flex items-center gap-1 rounded-[3px] bg-wash px-2 py-1 text-[12px] font-medium text-indigo transition hover:bg-[#dbe4ef]"
                     >
-                      <Clock size={12} /> {tt.label}
-                      {tt.type === "search" && <ExternalLink size={10} className="ml-0.5 opacity-80" />}
+                      <Navigation size={11} /> 導航
                     </a>
-                  ))}
-                </>
-              )}
-              <button onClick={() => startEdit(it)} className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100">
-                <Pencil size={12} /> 編輯
-              </button>
-              <button onClick={() => move(idx, -1)} disabled={idx === 0} className="rounded-lg bg-white p-1.5 text-slate-500 shadow-sm ring-1 ring-slate-200 disabled:opacity-30">
-                <ArrowUp size={12} />
-              </button>
-              <button onClick={() => move(idx, 1)} disabled={idx === day.items.length - 1} className="rounded-lg bg-white p-1.5 text-slate-500 shadow-sm ring-1 ring-slate-200 disabled:opacity-30">
-                <ArrowDown size={12} />
-              </button>
-              <button onClick={() => removeItem(it.id)} className="ml-auto rounded-lg bg-white p-1.5 text-red-400 shadow-sm ring-1 ring-slate-200 hover:bg-red-50">
-                <Trash2 size={12} />
-              </button>
-            </div>
-          </li>
-        ))}
-      </ol>
 
-      <button onClick={startNew} className="mt-4 flex w-full items-center justify-center gap-1 rounded-xl border-2 border-dashed border-orange-200 bg-orange-50/50 py-2.5 text-sm font-bold text-orange-600 transition hover:bg-orange-50">
-        <Plus size={16} /> 新增行程
-      </button>
+                    {isTransit &&
+                      (it.timetables ?? []).map((tt, ti) => (
+                        <a
+                          key={ti}
+                          href={tt.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded-[3px] border border-rule px-2 py-1 text-[11px] text-ink-soft transition hover:border-indigo hover:text-indigo"
+                        >
+                          <Clock size={10} /> {tt.label}
+                          {tt.type === "search" && <ExternalLink size={9} className="opacity-60" />}
+                        </a>
+                      ))}
 
-      {/* 新增 / 編輯表單 */}
+                    <div className="ml-auto flex items-center gap-0.5 transition lg:border-l lg:border-rule lg:pl-2 lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100">
+                      <IconButton onClick={() => startEdit(it)} label="編輯行程">
+                        <Pencil size={13} />
+                      </IconButton>
+                      <IconButton onClick={() => move(idx, -1)} disabled={idx === 0} label="上移">
+                        <ArrowUp size={13} />
+                      </IconButton>
+                      <IconButton
+                        onClick={() => move(idx, 1)}
+                        disabled={idx === day.items.length - 1}
+                        label="下移"
+                      >
+                        <ArrowDown size={13} />
+                      </IconButton>
+                      <IconButton onClick={() => removeItem(it.id)} label="刪除行程" danger>
+                        <Trash2 size={13} />
+                      </IconButton>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+
+      {day.items.length > 0 && (
+        <button
+          type="button"
+          onClick={startNew}
+          className="mt-4 flex w-full items-center justify-center gap-1.5 border border-dashed border-rule-2 py-3 text-[12.5px] font-medium text-ink-soft transition hover:border-indigo hover:text-indigo"
+        >
+          <Plus size={14} /> 新增行程
+        </button>
+      )}
+
+      {/* 新增 / 編輯：手機底部抽屜，桌機居中 */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={() => setEditing(null)}>
-          <div className="w-full max-w-md rounded-t-2xl bg-white p-5 sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-bold text-slate-800">{editing === "new" ? "新增行程" : "編輯行程"}</h3>
-              <button onClick={() => setEditing(null)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X size={18} /></button>
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 backdrop-blur-[2px] sm:items-center sm:p-6"
+          onClick={() => setEditing(null)}
+          role="presentation"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="trip-dialog-title"
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[92vh] w-full max-w-md overflow-y-auto border-t-2 border-seal bg-surface px-5 pb-6 pt-5 sm:border sm:border-rule"
+          >
+            <div className="mb-4 flex items-start justify-between gap-3 border-b border-rule pb-3">
+              <h3 id="trip-dialog-title" className="font-serif text-[16px] font-semibold">
+                {editing === "new" ? "新增行程" : "編輯行程"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditing(null)}
+                aria-label="關閉"
+                className="-mr-1 -mt-1 grid h-8 w-8 place-items-center rounded-[4px] text-ink-faint transition hover:bg-wash hover:text-ink"
+              >
+                <X size={17} />
+              </button>
             </div>
-            <div className="space-y-2.5">
-              <div className="grid grid-cols-2 gap-2">
-                <label className="text-xs font-bold text-slate-500">時間
-                  <input value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} placeholder="10:00" className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-normal text-slate-800 outline-none focus:border-orange-400" />
+
+            <div className="space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <label className={LABEL}>
+                  時間
+                  <input
+                    value={form.time}
+                    onChange={(e) => setForm({ ...form, time: e.target.value })}
+                    placeholder="10:00"
+                    className={INPUT + " tnum"}
+                  />
                 </label>
-                <label className="text-xs font-bold text-slate-500">類型
-                  <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-normal text-slate-800 outline-none focus:border-orange-400">
-                    {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                <label className={LABEL}>
+                  類型
+                  <select
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    className={INPUT}
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
                   </select>
                 </label>
               </div>
-              <label className="block text-xs font-bold text-slate-500">景點 / 餐廳名稱 *
-                <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="例：太宰府天滿宮" className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-normal text-slate-800 outline-none focus:border-orange-400" />
+
+              <label className={LABEL}>
+                景點 / 餐廳名稱 *
+                <input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="例：太宰府天滿宮"
+                  className={INPUT}
+                />
               </label>
-              <label className="block text-xs font-bold text-slate-500">地址 (用於 Google Maps 導航)
-                <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="例：太宰府天満宮（留空則用名稱搜尋）" className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-normal text-slate-800 outline-none focus:border-orange-400" />
+
+              <label className={LABEL}>
+                地址（用於 Google Maps 導航）
+                <input
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  placeholder="例：太宰府天満宮（留空則用名稱搜尋）"
+                  className={INPUT}
+                />
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="text-xs font-bold text-slate-500">時段 (無具體時間時顯示)
-                  <select value={form.slot} onChange={(e) => setForm({ ...form, slot: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-normal text-slate-800 outline-none focus:border-orange-400">
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className={LABEL}>
+                  時段（無具體時間時顯示）
+                  <select
+                    value={form.slot}
+                    onChange={(e) => setForm({ ...form, slot: e.target.value })}
+                    className={INPUT}
+                  >
                     <option value="">無</option>
                     <option value="上午">上午</option>
                     <option value="下午">下午</option>
                     <option value="晚上">晚上</option>
                   </select>
                 </label>
-                <label className="text-xs font-bold text-slate-500">花費 (JPY ¥)
-                  <input type="number" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} placeholder="0" className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-normal text-slate-800 outline-none focus:border-orange-400" />
+                <label className={LABEL}>
+                  花費（JPY ¥）
+                  <input
+                    type="number"
+                    value={form.cost}
+                    onChange={(e) => setForm({ ...form, cost: e.target.value })}
+                    placeholder="0"
+                    className={INPUT + " tnum"}
+                  />
                 </label>
               </div>
-              <label className="block text-xs font-bold text-slate-500">備忘
-                <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="必吃梅枝餅" className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-normal text-slate-800 outline-none focus:border-orange-400" />
+
+              <label className={LABEL}>
+                備忘
+                <input
+                  value={form.note}
+                  onChange={(e) => setForm({ ...form, note: e.target.value })}
+                  placeholder="必吃梅枝餅"
+                  className={INPUT}
+                />
               </label>
-              <button onClick={saveForm} disabled={!form.title.trim()} className="w-full rounded-xl bg-red-500 py-2.5 text-sm font-bold text-white transition hover:bg-red-600 disabled:opacity-40">
+
+              <button
+                type="button"
+                onClick={saveForm}
+                disabled={!form.title.trim()}
+                className="mt-1 w-full bg-seal py-2.5 text-[13.5px] font-medium text-white transition hover:bg-[#a8341f] disabled:opacity-35 disabled:hover:bg-seal"
+              >
                 儲存
               </button>
             </div>

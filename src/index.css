@@ -1,33 +1,127 @@
 @import "tailwindcss";
 
+/* ───────────────────────────── 設計 token ─────────────────────────────
+   藍白磁：伊万里・有田的磁器（磁白底 / 濃藍墨）
+   朱印：全站唯一的強調色，只用在「當日、完成、必用」
+──────────────────────────────────────────────────────────────────── */
 @theme {
-  --color-mentai: #e63946;
-  --color-mentai-dark: #c1121f;
-  --color-ramen: #f4a261;
-  --color-ramen-light: #fef3e2;
-  --color-hakata: #1d3557;
-  --font-sans: "Noto Sans TC", "Hiragino Sans", system-ui, sans-serif;
+  --color-paper: #f6f7f5;
+  --color-surface: #fcfcfa;
+  --color-rule: #d9dee3;
+  --color-rule-2: #b9c3cd;
+  --color-ink: #15263c;
+  --color-ink-soft: #4a5a6e;
+  --color-ink-faint: #5b6774;
+  --color-indigo: #1b3a6b;
+  --color-indigo-deep: #12294d;
+  --color-wash: #e7ecf3;
+  --color-seal: #be3e28;
+
+  /* 釉色：四個功能區的身份色，只用在標題、2px 線、長條 */
+  --color-glaze-blue: #1b3a6b; /* 染付｜行程 */
+  --color-glaze-celadon: #45705f; /* 青磁｜工具箱 */
+  --color-glaze-brass: #7a5a24; /* 金襴｜預算 */
+  --color-brass-wash: #ede6d8; /* 金襴長條的底軌 */
+
+  /* 分類＝鐵道線色：圓點與類別小字，皆 ≥4.5:1 */
+  --color-cat-sight: #2a6157;
+  --color-cat-food: #96501f;
+  --color-cat-transit: #1b3a6b;
+  --color-cat-shop: #74405c;
+  --color-cat-stay: #565b3c;
+  --color-cat-other: #5b6675;
+
+  --font-sans: "Noto Sans TC Variable", "Noto Sans TC", "Hiragino Sans",
+    "PingFang TC", system-ui, sans-serif;
+  --font-serif: "Noto Serif TC Variable", "Noto Serif TC", "Songti TC",
+    "PingFang TC", serif;
 }
 
-html {
-  scroll-behavior: smooth;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: #dbe4ef;
+    color: var(--color-indigo-deep);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-indigo);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-family: inherit;
+  }
+
+  /* 數字輸入不要上下箭頭，賬單行內編輯才乾淨 */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }
 
-body {
-  background-color: #fffbf7;
-  color: #1d3557;
-  font-family: var(--font-sans);
+@layer utilities {
+  /* 時刻與金額一律等寬數字 */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* 日籤緞帶自己滑，不要多一條滾動條 */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
-/* 細捲軸美化 */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #e5d5c3;
+  background: var(--color-rule-2);
   border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

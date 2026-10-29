@@ -1,5 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import '@fontsource-variable/noto-sans-tc'
+import '@fontsource-variable/noto-serif-tc'
 import './index.css'
 import App from './App.jsx'
 

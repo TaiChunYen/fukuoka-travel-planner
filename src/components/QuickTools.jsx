@@ -1,4 +1,4 @@
-import { CloudSun, ExternalLink, Landmark, QrCode, TrainFront, Bus, Ship } from "lucide-react";
+import { CloudSun, ExternalLink, Landmark, MapPin, QrCode, TrainFront, Bus } from "lucide-react";
 
 const LINKS = [
   {
@@ -20,45 +20,54 @@ const LINKS = [
   {
     group: "實用工具",
     items: [
-      { name: "Google Maps 福岡", desc: "開啟福岡市區地圖", url: "https://www.google.com/maps/search/?api=1&query=Fukuoka+Hakata", icon: Ship, hot: false },
+      { name: "Google Maps 福岡", desc: "開啟福岡市區地圖", url: "https://www.google.com/maps/search/?api=1&query=Fukuoka+Hakata", icon: MapPin, hot: false },
     ],
   },
 ];
 
 export default function QuickTools() {
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-orange-100 sm:p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-bold text-slate-800">🧭 旅途工具箱 <span className="ml-1 text-xs font-normal text-slate-400">一鍵跳轉官方網站</span></h2>
-      </div>
+    <section aria-labelledby="tools-heading" className="border-t-2 border-glaze-celadon pt-4">
+      <h2 id="tools-heading" className="font-serif text-base font-semibold text-glaze-celadon">
+        旅途工具箱
+      </h2>
+      <p className="mt-0.5 text-[11.5px] text-ink-faint">一鍵跳轉官方網站</p>
+
       {LINKS.map((g) => (
-        <div key={g.group} className="mb-3 last:mb-0">
-          <p className="mb-2 text-xs font-semibold tracking-wide text-orange-500">{g.group}</p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div key={g.group} className="mt-4">
+          <p className="text-[11px] text-ink-faint">{g.group}</p>
+          <ul className="mt-1.5 border-t border-rule">
             {g.items.map((l) => (
-              <a
-                key={l.name}
-                href={l.url}
-                target="_blank"
-                rel="noreferrer"
-                className={`group flex items-center gap-3 rounded-xl border p-3 transition hover:-translate-y-0.5 hover:shadow-md ${
-                  l.hot ? "border-red-200 bg-red-50 hover:border-red-300" : "border-slate-100 bg-slate-50 hover:border-orange-200 hover:bg-orange-50"
-                }`}
-              >
-                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${l.hot ? "bg-red-500 text-white" : "bg-white text-orange-500 shadow-sm"}`}>
-                  <l.icon size={18} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1 text-sm font-bold text-slate-800">
-                    {l.name}
-                    {l.hot && <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] leading-none text-white">機場必用</span>}
+              <li key={l.name}>
+                <a
+                  href={l.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group flex items-center gap-2.5 border-b border-rule/70 py-2.5 transition hover:bg-wash/50"
+                >
+                  <l.icon
+                    size={15}
+                    className="shrink-0 text-ink-faint transition group-hover:text-glaze-celadon"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline gap-1.5 text-[13px] font-medium text-ink">
+                      {l.name}
+                      {l.hot && (
+                        <span className="border border-seal/30 px-1 text-[10px] font-normal text-seal">
+                          機場必用
+                        </span>
+                      )}
+                    </span>
+                    <span className="block truncate text-[11.5px] text-ink-faint">{l.desc}</span>
                   </span>
-                  <span className="block truncate text-xs text-slate-500">{l.desc}</span>
-                </span>
-                <ExternalLink size={14} className="shrink-0 text-slate-300 transition group-hover:text-orange-500" />
-              </a>
+                  <ExternalLink
+                    size={12}
+                    className="shrink-0 text-rule-2 transition group-hover:text-glaze-celadon"
+                  />
+                </a>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       ))}
     </section>
